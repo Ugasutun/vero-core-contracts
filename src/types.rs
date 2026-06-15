@@ -11,6 +11,17 @@ pub struct Task {
     pub total_weight_accrued: u64,
 }
 
+/// Represents an active reward stream initiated via the Drips protocol
+/// after a task has been verified by guardian consensus.
+#[contracttype]
+#[derive(Clone)]
+pub struct RewardStream {
+    pub task_id: u64,
+    pub contributor: Address,
+    pub drips_contract: Address,
+    pub active: bool,
+}
+
 #[contracttype]
 #[derive(Clone)]
 pub enum DataKey {
@@ -18,10 +29,8 @@ pub enum DataKey {
     Task(u64),
     Voted(u64, Address), // (task_id, guardian)
     Admin,
-    /// Maps a guardian address to their u64 reputation score.
-    Reputation(Address),
-    /// The minimum cumulative weight required to resolve a task.
-    WeightThreshold,
+    DripsAddress,
+    RewardStream(u64), // keyed by task_id
 }
 
 #[contracterror]
@@ -29,10 +38,7 @@ pub enum DataKey {
 pub enum ContractError {
     NotAuthorized = 1,
     DuplicateVote = 2,
-    /// The guardian has no reputation score assigned.
-    NoReputationScore = 3,
-    /// A zero-weight vote is not allowed.
-    ZeroWeightVote = 4,
-    /// Arithmetic overflow when accumulating vote weight.
-    WeightOverflow = 5,
+    TaskNotVerified = 3,
+    StreamAlreadyActive = 4,
+    DripsCallFailed = 5,
 }

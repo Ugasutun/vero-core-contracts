@@ -2,22 +2,20 @@
 
 use soroban_sdk::{symbol_short, Address, Env};
 
-/// Emits an event when a weighted vote is cast by a guardian.
+/// Emits an event when a reward stream is started for a contributor.
 ///
-/// Event topic: `"wt_vote"` (weighted_vote)
-/// Event data: `(task_id, guardian_address, weight)`
-pub fn emit_weighted_vote(env: &Env, task_id: u64, guardian: &Address, weight: u64) {
-    env.events().publish(
-        (symbol_short!("wt_vote"),),
-        (task_id, guardian.clone(), weight),
-    );
+/// Event topic: `"rw_start"` (reward_stream_started)
+/// Event data: `(task_id, contributor_address)`
+pub fn emit_reward_stream_started(env: &Env, task_id: u64, contributor: &Address) {
+    env.events()
+        .publish((symbol_short!("rw_start"),), (task_id, contributor.clone()));
 }
 
-/// Emits an event when a task reaches the weight threshold and is resolved.
+/// Emits an event when a cross-contract Drips call fails.
 ///
-/// Event topic: `"resolved"` (task_resolved)
-/// Event data: `(task_id, total_weight_accrued)`
-pub fn emit_task_resolved(env: &Env, task_id: u64, total_weight_accrued: u64) {
+/// Event topic: `"rw_fail"` (reward_stream_failed)
+/// Event data: `(task_id, contributor_address)`
+pub fn emit_reward_stream_failed(env: &Env, task_id: u64, contributor: &Address) {
     env.events()
-        .publish((symbol_short!("resolved"),), (task_id, total_weight_accrued));
+        .publish((symbol_short!("rw_fail"),), (task_id, contributor.clone()));
 }
