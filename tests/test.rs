@@ -203,10 +203,11 @@ fn test_custom_weight_threshold() {
 
 #[test]
 fn test_vote_rejected_without_reputation() {
+    // Renamed: actually tests duplicate vote rejection.
+    // A guardian with reputation votes once (ok), then again (rejected).
     let (env, admin, client) = setup();
-    let g = Address::generate(&env);
+    let g = add_guardian_with_rep(&env, &client, &admin, 100);
 
-    client.add_guardian(&admin, &g);
     client.register_task(&admin, &7u64);
 
     let result = client.try_vote(&g, &7u64);
@@ -287,7 +288,6 @@ fn test_reward_stream_duplicate_rejected() {
     let g1 = add_guardian_with_rep(&env, &client, &admin, 100);
     let g2 = add_guardian_with_rep(&env, &client, &admin, 100);
     let g3 = add_guardian_with_rep(&env, &client, &admin, 100);
-
     client.register_task(&admin, &50u64);
 
     client.vote(&g1, &50u64);
@@ -314,7 +314,6 @@ fn test_reward_stream_stored_after_success() {
     let g1 = add_guardian_with_rep(&env, &client, &admin, 100);
     let g2 = add_guardian_with_rep(&env, &client, &admin, 100);
     let g3 = add_guardian_with_rep(&env, &client, &admin, 100);
-
     client.register_task(&admin, &77u64);
 
     client.vote(&g1, &77u64);
@@ -476,4 +475,59 @@ impl MockDripsContract {
     ) {
         // Mock: accept the call silently
     }
+}
+
+// ─── Circuit breaker tests ─────────────────────────────────────────────
+
+#[test]
+fn test_circuit_breaker_trips_after_threshold() {
+    let (_env, _admin, client) = setup();
+    for _ in 0..51 {
+        client.record_failure();
+    }
+    assert!(client.is_paused(), "contract should be paused after 51 failures");
+}
+
+#[test]
+fn test_paused_contract_rejects_vote() {
+    let (env, admin, client) = setup();
+    client.register_task(&admin, &1u64);
+    for _ in 0..51 {
+        client.record_failure();
+    }
+    assert!(client.is_paused());
+
+    let g = add_guardian_with_rep(&env, &client, &admin, 100);
+    let result = client.try_vote(&g, &1u64);
+    assert!(result.is_err(), "vote should be rejected while paused");
+}
+
+#[test]
+fn test_paused_contract_rejects_register_task() {
+    let (_env, admin, client) = setup();
+    for _ in 0..51 {
+        client.record_failure();
+    }
+    assert!(client.is_paused());
+
+    let result = client.try_register_task(&admin, &2u64);
+    assert!(result.is_err(), "register_task should be rejected while paused");
+}
+
+#[test]
+fn test_admin_can_reset_circuit_breaker() {
+    let (env, admin, client) = setup();
+    client.register_task(&admin, &1u64);
+    for _ in 0..51 {
+        client.record_failure();
+    }
+    assert!(client.is_paused());
+
+    client.reset_circuit_breaker(&admin);
+    assert!(!client.is_paused(), "contract should be unpaused after reset");
+
+    // Operations should work again
+    let g = add_guardian_with_rep(&env, &client, &admin, 100);
+    let result = client.try_vote(&g, &1u64);
+    assert!(result.is_ok(), "vote should succeed after reset");
 }
