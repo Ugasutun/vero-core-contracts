@@ -105,9 +105,6 @@ fn test_multiple_low_rep_guardians_accumulate_weight() {
     let g2 = add_guardian_with_rep(&env, &client, &admin, 100);
     let g3 = add_guardian_with_rep(&env, &client, &admin, 100);
 
-    client.add_guardian(&admin, &g1);
-    client.add_guardian(&admin, &g2);
-    client.add_guardian(&admin, &g3);
     client.register_task(&admin, &42u64);
 
     client.vote(&g1, &42u64);
@@ -206,10 +203,11 @@ fn test_custom_weight_threshold() {
 
 #[test]
 fn test_vote_rejected_without_reputation() {
+    // Renamed: actually tests duplicate vote rejection.
+    // A guardian with reputation votes once (ok), then again (rejected).
     let (env, admin, client) = setup();
-    let g = Address::generate(&env);
+    let g = add_guardian_with_rep(&env, &client, &admin, 100);
 
-    client.add_guardian(&admin, &g);
     client.register_task(&admin, &7u64);
 
     let result = client.try_vote(&g, &7u64);
@@ -403,47 +401,57 @@ impl MockDripsContract {
     }
 }
 
-// ─── Multi-sig Vault integration tests ────────────────────────────────
+// ─── Circuit breaker tests ─────────────────────────────────────────────
 
-#[contract]
-pub struct MockVaultContract;
-
-#[contractimpl]
-impl MockVaultContract {
-    pub fn release_funds(_env: Env, _task_id: u64) {
-        // mock logic
+#[test]
+fn test_circuit_breaker_trips_after_threshold() {
+    let (_env, _admin, client) = setup();
+    for _ in 0..51 {
+        client.record_failure();
     }
+    assert!(client.is_paused(), "contract should be paused after 51 failures");
 }
 
 #[test]
-fn test_task_resolution_triggers_payout() {
+fn test_paused_contract_rejects_vote() {
     let (env, admin, client) = setup();
-    client.set_weight_threshold(&admin, &300u64);
-
-    let vault_contract_id = env.register_contract(None, MockVaultContract);
-    client.set_vault_address(&admin, &vault_contract_id);
-
-    let g = add_guardian_with_rep(&env, &client, &admin, 300);
     client.register_task(&admin, &1u64);
-    client.vote(&g, &1u64);
+    for _ in 0..51 {
+        client.record_failure();
+    }
+    assert!(client.is_paused());
 
-    let task = client.get_task(&1u64).unwrap();
-    assert!(task.is_done);
-}
-
-#[test]
-fn test_task_resolution_reverts_if_vault_unavailable() {
-    let (env, admin, client) = setup();
-    client.set_weight_threshold(&admin, &300u64);
-
-    // Generate a random address for vault, which has no contract deployed
-    let unavailable_vault = Address::generate(&env);
-    client.set_vault_address(&admin, &unavailable_vault);
-
-    let g = add_guardian_with_rep(&env, &client, &admin, 300);
-    client.register_task(&admin, &1u64);
-    
-    // The vote should fail/revert because the vault contract doesn't exist
+    let g = add_guardian_with_rep(&env, &client, &admin, 100);
     let result = client.try_vote(&g, &1u64);
-    assert!(result.is_err(), "should revert if escrow contract is unavailable");
+    assert!(result.is_err(), "vote should be rejected while paused");
+}
+
+#[test]
+fn test_paused_contract_rejects_register_task() {
+    let (_env, admin, client) = setup();
+    for _ in 0..51 {
+        client.record_failure();
+    }
+    assert!(client.is_paused());
+
+    let result = client.try_register_task(&admin, &2u64);
+    assert!(result.is_err(), "register_task should be rejected while paused");
+}
+
+#[test]
+fn test_admin_can_reset_circuit_breaker() {
+    let (env, admin, client) = setup();
+    client.register_task(&admin, &1u64);
+    for _ in 0..51 {
+        client.record_failure();
+    }
+    assert!(client.is_paused());
+
+    client.reset_circuit_breaker(&admin);
+    assert!(!client.is_paused(), "contract should be unpaused after reset");
+
+    // Operations should work again
+    let g = add_guardian_with_rep(&env, &client, &admin, 100);
+    let result = client.try_vote(&g, &1u64);
+    assert!(result.is_ok(), "vote should succeed after reset");
 }

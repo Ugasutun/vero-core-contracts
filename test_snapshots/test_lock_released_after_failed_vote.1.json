@@ -725,7 +725,7 @@
           "v0": {
             "topics": [
               {
-                "symbol": "vote"
+                "symbol": "wt_vote"
               }
             ],
             "data": {
