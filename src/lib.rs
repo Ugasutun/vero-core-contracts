@@ -10,8 +10,8 @@ mod types;
 mod vault;
 pub mod events;
 
-use soroban_sdk::{contract, contractimpl, Address, Env};
-use types::{ContractError, DataKey, RewardStream};
+use soroban_sdk::{contract, contractimpl, Address, Env, Map};
+use types::{ContractError, DataKey, RewardStream, Snapshot};
 
 pub use guardian::{add_guardian, is_guardian};
 pub use task::{get_task, register_task};
@@ -305,6 +305,14 @@ impl VeroContract {
             }
         }
 
+        let mut all_votes: soroban_sdk::Vec<(u64, Address)> = env
+            .storage()
+            .instance()
+            .get(&DataKey::AllVotes)
+            .unwrap_or(soroban_sdk::Vec::new(&env));
+        all_votes.push_back((task_id, guardian.clone()));
+        env.storage().instance().set(&DataKey::AllVotes, &all_votes);
+
         env.storage().instance().set(&voted_key, &true);
         env.storage().instance().set(&task_key, &t);
 
@@ -357,5 +365,69 @@ impl VeroContract {
     pub fn upgrade_contract(env: Env, admin: Address, new_wasm_hash: soroban_sdk::BytesN<32>) {
         admin.require_auth();
         env.deployer().update_current_contract_wasm(new_wasm_hash);
+    }
+
+    // ─── Snapshot ──────────────────────────────────────────────────
+
+    pub fn get_snapshot(env: Env) -> Snapshot {
+        let paused = env.storage().instance().get(&DataKey::Paused).unwrap_or(false);
+        let failure_count = env.storage().instance().get(&DataKey::FailureCount).unwrap_or(0);
+        let weight_threshold = env.storage().instance().get(&DataKey::WeightThreshold).unwrap_or(DEFAULT_WEIGHT_THRESHOLD);
+        let admin = env.storage().instance().get(&DataKey::Admin);
+        let vault_address = env.storage().instance().get(&DataKey::VaultAddress);
+        let drips_address = env.storage().instance().get(&DataKey::DripsAddress);
+
+        let mut guardians = Map::new(&env);
+        let all_guardians = guardian::get_all_guardians(&env);
+        for g in all_guardians.iter() {
+            guardians.set(g.clone(), guardian::is_guardian(&env, &g));
+        }
+
+        let mut reputations = Map::new(&env);
+        for g in all_guardians.iter() {
+            if let Some(score) = reputation::get_reputation(&env, &g) {
+                reputations.set(g.clone(), score);
+            }
+        }
+
+        let mut tasks = Map::new(&env);
+        let all_tasks = task::get_all_tasks(&env);
+        for t in all_tasks.iter() {
+            if let Some(task) = task::get_task(&env, t) {
+                tasks.set(t, task);
+            }
+        }
+
+        let mut votes = Map::new(&env);
+        let all_votes: soroban_sdk::Vec<(u64, Address)> = env
+            .storage()
+            .instance()
+            .get(&DataKey::AllVotes)
+            .unwrap_or(soroban_sdk::Vec::new(&env));
+        for v in all_votes.iter() {
+            votes.set(v, true);
+        }
+
+        let mut reward_streams = Map::new(&env);
+        let all_streams = drips::get_all_reward_streams(&env);
+        for s in all_streams.iter() {
+            if let Some(stream) = drips::get_reward_stream(&env, s) {
+                reward_streams.set(s, stream);
+            }
+        }
+
+        Snapshot {
+            paused,
+            failure_count,
+            weight_threshold,
+            admin,
+            vault_address,
+            drips_address,
+            guardians,
+            reputations,
+            tasks,
+            votes,
+            reward_streams,
+        }
     }
 }
