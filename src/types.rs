@@ -1,4 +1,4 @@
-use soroban_sdk::{contracterror, contracttype, Address};
+use soroban_sdk::{contracterror, contracttype, Address, Map, Vec};
 
 #[contracttype]
 #[derive(Clone)]
@@ -20,6 +20,22 @@ pub struct RewardStream {
 
 #[contracttype]
 #[derive(Clone)]
+pub struct Snapshot {
+    pub paused: bool,
+    pub failure_count: u32,
+    pub weight_threshold: u64,
+    pub admin: Option<Address>,
+    pub vault_address: Option<Address>,
+    pub drips_address: Option<Address>,
+    pub guardians: Map<Address, bool>,
+    pub reputations: Map<Address, u64>,
+    pub tasks: Map<u64, Task>,
+    pub votes: Map<(u64, Address), bool>,
+    pub reward_streams: Map<u64, RewardStream>,
+}
+
+#[contracttype]
+#[derive(Clone)]
 pub enum DataKey {
     Guardian(Address),
     Reputation(Address),
@@ -36,6 +52,10 @@ pub enum DataKey {
     Lock,
     FailureCount,
     Paused,
+    AllGuardians,
+    AllTasks,
+    AllVotes,
+    AllRewardStreams,
 }
 
 #[contracterror]
