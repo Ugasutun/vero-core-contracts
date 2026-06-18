@@ -1,4 +1,4 @@
-use soroban_sdk::{contracterror, contracttype, Address, Map, Vec};
+use soroban_sdk::{contracterror, contracttype, Address, Map};
 
 #[contracttype]
 #[derive(Clone)]
@@ -48,36 +48,7 @@ pub struct Snapshot {
     pub reward_streams: Map<u64, RewardStream>,
 }
 
-#[contracttype]
-#[derive(Clone)]
-pub enum DataKey {
-    Guardian(Address),
-    Reputation(Address),
-    WeightThreshold,
-    Task(u64),
-    Voted(u64, Address),
-    Admin,
-    DripsAddress,
-    VaultAddress,
-    RewardStream(u64),
-    TokenAddress,
-    LockThreshold,
-    LockedBalance(Address),
-    Lock,
-    FailureCount,
-    Paused,
-    AllGuardians,
-    AllTasks,
-    AllVotes,
-    AllRewardStreams,
-    Snapshot(u64),
-    AllSnapshots,
-    ActiveTask(u64),
-    ArchivedTask(u64),
-    Initialized,
-    WithdrawalTimelock(Address),
-}
-
+pub use crate::contracts::storage_layout::DataKey;
 /// Every public write operation exposed by VeroContract.
 #[contracttype]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -125,4 +96,5 @@ pub enum ContractError {
     TaskNotStale = 21,
     SnapshotNotFound = 22,
     WithdrawalTimelockActive = 23,
+    InsufficientReputation = 24,
 }
