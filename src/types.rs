@@ -1,17 +1,18 @@
-use soroban_sdk::{contracterror, contracttype, Address, Map, Vec};
+use soroban_sdk::{contracterror, contracttype, Address, Map};
 
 #[contracttype]
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Task {
     pub id: u64,
     pub votes: u32,
     pub is_done: bool,
+    pub resolved_at: u64,
     pub total_weight_accrued: u64,
     pub is_cancelled: bool,
 }
 
 #[contracttype]
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RewardStream {
     pub task_id: u64,
     pub contributor: Address,
@@ -50,6 +51,7 @@ pub enum DataKey {
     TokenAddress,
     LockThreshold,
     LockedBalance(Address),
+    ArchivedTask(u64),
     Lock,
     FailureCount,
     Paused,
@@ -114,4 +116,12 @@ pub enum ContractError {
     ContractPaused = 15,
     EscrowUnavailable = 16,
     TaskCancelled = 17,
+    InvalidAddress = 18,
+    InvalidAmount = 19,
+    InvalidConfig = 20,
+    InvalidRange = 21,
+    BatchTooLarge = 22,
+    TaskNotFound = 23,
+    TaskAlreadyArchived = 24,
+    TaskNotStale = 25,
 }

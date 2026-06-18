@@ -32,6 +32,5 @@ pub fn emit_circuit_breaker_triggered(env: &Env, failure_count: u32) {
 }
 
 pub fn emit_task_cancelled(env: &Env, task_id: u64) {
-    env.events()
-        .publish((symbol_short!("cancelled"),), task_id);
+    env.events().publish((symbol_short!("cancelled"),), task_id);
 }

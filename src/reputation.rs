@@ -1,6 +1,8 @@
 use soroban_sdk::{Address, Env};
 
-use crate::types::DataKey;
+use crate::guardian;
+use crate::types::{ContractError, DataKey};
+use crate::validation;
 
 /// Sets the reputation score for a guardian. Only callable by admin.
 ///
@@ -9,11 +11,23 @@ use crate::types::DataKey;
 /// * `admin` - The admin address (must pass `require_auth`).
 /// * `guardian` - The guardian whose reputation is being set.
 /// * `score` - The u64 reputation score to assign.
-pub fn set_reputation(env: &Env, admin: Address, guardian: Address, score: u64) {
+pub fn set_reputation(
+    env: &Env,
+    admin: Address,
+    guardian: Address,
+    score: u64,
+) -> Result<(), ContractError> {
+    validation::validate_guardian_config(env, &admin, &guardian)?;
+    validation::validate_reputation_score(score)?;
     admin.require_auth();
+
+    if !guardian::is_guardian(env, &guardian) {
+        return Err(ContractError::NotGuardian);
+    }
 
     let key = DataKey::Reputation(guardian);
     env.storage().instance().set(&key, &score);
+    Ok(())
 }
 
 /// Retrieves the raw reputation score for a guardian, if one exists.
