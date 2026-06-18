@@ -24,6 +24,7 @@ pub const COST_REGISTER_TASK: u64 = 1_000_000;
 ///   base + circuit-breaker read + 5 reads (token, threshold, balance, voted, task)
 ///   + reentrancy lock/unlock (2 writes) + voted write + task write + event emission
 ///   + conditional cross-contract call to vault
+///     500_000 + 5*50_000 + 2*150_000 + 2*150_000 + 2*30_000 + 500_000
 ///
 ///   500_000 + 5*50_000 + 2*150_000 + 2*150_000 + 2*30_000 + 500_000
 pub const COST_VOTE: u64 = 1_960_000;
@@ -45,12 +46,13 @@ pub const COST_LOCK_TOKENS: u64 = 1_250_000;
 
 /// `unlock_tokens`:
 ///   base + has() check + guardian read + balance read + token transfer + balance write
-///   500_000 + 50_000 + 50_000 + 50_000 + 500_000 + 150_000
+///     500_000 + 50_000 + 50_000 + 50_000 + 500_000 + 150_000
 pub const COST_UNLOCK_TOKENS: u64 = 1_300_000;
 
 /// `resign_guardian`:
 ///   base + has() check + guardian status write + balance read
 ///   + conditional token transfer + balance write
+///     500_000 + 50_000 + 150_000 + 50_000 + 500_000 + 150_000
 ///
 ///   500_000 + 50_000 + 150_000 + 50_000 + 500_000 + 150_000
 pub const COST_RESIGN_GUARDIAN: u64 = 1_400_000;
@@ -63,6 +65,7 @@ pub const COST_SET_WEIGHT_THRESHOLD: u64 = 650_000;
 /// `start_reward_stream`:
 ///   base + circuit-breaker read + task read + stream has() check
 ///   + cross-contract call to Drips + stream write + event
+///     500_000 + 50_000 + 50_000 + 50_000 + 500_000 + 150_000 + 30_000
 ///
 ///   500_000 + 50_000 + 50_000 + 50_000 + 500_000 + 150_000 + 30_000
 pub const COST_START_REWARD_STREAM: u64 = 1_330_000;
