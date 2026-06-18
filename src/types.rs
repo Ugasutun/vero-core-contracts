@@ -48,8 +48,6 @@ pub struct Snapshot {
     pub reward_streams: Map<u64, RewardStream>,
 }
 
-pub use crate::contracts::storage_layout::DataKey;
-
 #[contracttype]
 #[derive(Clone)]
 pub enum DataKey {
