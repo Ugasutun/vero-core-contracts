@@ -1,7 +1,10 @@
-use soroban_sdk::{Address, Env, Map};
 use crate::types::{ContractError, DataKey, Snapshot};
-use crate::{circuit_breaker, drips, events, guardian, reentrancy, reputation, storage, task, timelock, vault};
 use crate::DEFAULT_WEIGHT_THRESHOLD;
+use crate::{
+    circuit_breaker, drips, events, guardian, reentrancy, reputation, storage, task, timelock,
+    vault,
+};
+use soroban_sdk::{Address, Env, Map};
 
 pub(crate) fn lock_tokens(env: &Env, guardian: Address, amount: i128) -> Result<(), ContractError> {
     guardian.require_auth();
@@ -32,10 +35,10 @@ pub(crate) fn unlock_tokens(env: &Env, guardian: Address) -> Result<(), Contract
     if guardian::is_guardian(env, &guardian) {
         return Err(ContractError::StillGuardian);
     }
-    
+
     // Check if timelock has expired
     timelock::check_timelock_expired(env, &guardian)?;
-    
+
     let key = DataKey::LockedBalance(guardian.clone());
     let amount: i128 = env.storage().instance().get(&key).unwrap_or(0);
     if amount > 0 {
@@ -48,7 +51,7 @@ pub(crate) fn unlock_tokens(env: &Env, guardian: Address) -> Result<(), Contract
         token_client.transfer(&env.current_contract_address(), &guardian, &amount);
         env.storage().instance().set(&key, &0i128);
     }
-    
+
     // Clear the timelock after successful withdrawal
     timelock::clear_timelock(env, &guardian);
     Ok(())
@@ -59,10 +62,10 @@ pub(crate) fn resign_guardian(env: &Env, guardian: Address) -> Result<(), Contra
     if !guardian::is_guardian(env, &guardian) {
         return Err(ContractError::NotGuardian);
     }
-    
+
     // Check if timelock has expired
     timelock::check_timelock_expired(env, &guardian)?;
-    
+
     let g_key = DataKey::Guardian(guardian.clone());
     env.storage().instance().remove(&g_key);
     let key = DataKey::LockedBalance(guardian.clone());
@@ -77,13 +80,17 @@ pub(crate) fn resign_guardian(env: &Env, guardian: Address) -> Result<(), Contra
         token_client.transfer(&env.current_contract_address(), &guardian, &amount);
         env.storage().instance().set(&key, &0i128);
     }
-    
+
     // Clear the timelock after successful resignation
     timelock::clear_timelock(env, &guardian);
     Ok(())
 }
 
-pub(crate) fn process_vote(env: &Env, guardian: Address, task_id: u64) -> Result<(), ContractError> {
+pub(crate) fn process_vote(
+    env: &Env,
+    guardian: Address,
+    task_id: u64,
+) -> Result<(), ContractError> {
     circuit_breaker::require_not_paused(env)?;
     guardian.require_auth();
     reentrancy::lock(env)?;
@@ -98,7 +105,11 @@ pub(crate) fn process_vote(env: &Env, guardian: Address, task_id: u64) -> Result
         reentrancy::unlock(env);
         return Err(ContractError::NotInitialized);
     }
-    let threshold: i128 = env.storage().instance().get(&DataKey::LockThreshold).unwrap_or(0);
+    let threshold: i128 = env
+        .storage()
+        .instance()
+        .get(&DataKey::LockThreshold)
+        .unwrap_or(0);
     let balance_key = DataKey::LockedBalance(guardian.clone());
     let locked_balance: i128 = env.storage().instance().get(&balance_key).unwrap_or(0);
 
@@ -159,7 +170,11 @@ pub(crate) fn process_vote(env: &Env, guardian: Address, task_id: u64) -> Result
         t.resolved_at = env.ledger().timestamp();
         events::emit_task_resolved(env, task_id, t.total_weight_accrued);
 
-        if let Some(vault_addr) = env.storage().instance().get::<_, Address>(&DataKey::VaultAddress) {
+        if let Some(vault_addr) = env
+            .storage()
+            .instance()
+            .get::<_, Address>(&DataKey::VaultAddress)
+        {
             let vault_client = vault::VaultClient::new(env, &vault_addr);
             vault_client.release_funds(&task_id);
         }
@@ -184,9 +199,21 @@ pub(crate) fn process_vote(env: &Env, guardian: Address, task_id: u64) -> Result
 
 pub(crate) fn get_snapshot(env: &Env) -> Snapshot {
     let timestamp = env.ledger().timestamp();
-    let paused = env.storage().instance().get(&DataKey::Paused).unwrap_or(false);
-    let failure_count = env.storage().instance().get(&DataKey::FailureCount).unwrap_or(0);
-    let weight_threshold = env.storage().instance().get(&DataKey::WeightThreshold).unwrap_or(DEFAULT_WEIGHT_THRESHOLD);
+    let paused = env
+        .storage()
+        .instance()
+        .get(&DataKey::Paused)
+        .unwrap_or(false);
+    let failure_count = env
+        .storage()
+        .instance()
+        .get(&DataKey::FailureCount)
+        .unwrap_or(0);
+    let weight_threshold = env
+        .storage()
+        .instance()
+        .get(&DataKey::WeightThreshold)
+        .unwrap_or(DEFAULT_WEIGHT_THRESHOLD);
     let admin = env.storage().instance().get(&DataKey::Admin);
     let vault_address = env.storage().instance().get(&DataKey::VaultAddress);
     let drips_address = env.storage().instance().get(&DataKey::DripsAddress);
@@ -256,9 +283,13 @@ pub(crate) fn record_snapshot(env: &Env) -> Result<(), ContractError> {
         .get(&DataKey::AllSnapshots)
         .unwrap_or(soroban_sdk::Vec::new(env));
     all_snapshots.push_back(timestamp);
-    env.storage().instance().set(&DataKey::AllSnapshots, &all_snapshots);
+    env.storage()
+        .instance()
+        .set(&DataKey::AllSnapshots, &all_snapshots);
 
-    env.storage().instance().set(&DataKey::Snapshot(timestamp), &snapshot);
+    env.storage()
+        .instance()
+        .set(&DataKey::Snapshot(timestamp), &snapshot);
     events::emit_snapshot_recorded(env, timestamp);
 
     Ok(())

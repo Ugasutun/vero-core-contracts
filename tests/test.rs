@@ -208,9 +208,8 @@ fn test_insufficient_weight_does_not_resolve_task() {
     let (env, admin, token, client) = setup();
     client.set_weight_threshold(&admin, &600u64);
 
-    let guardians: [Address; 5] = core::array::from_fn(|_| {
-        add_guardian_with_rep(&env, &client, &admin, 100)
-    });
+    let guardians: [Address; 5] =
+        core::array::from_fn(|_| add_guardian_with_rep(&env, &client, &admin, 100));
 
     client.register_task(&admin, &10u64);
 
@@ -582,7 +581,9 @@ fn test_contract_paused_error_on_set_reputation() {
 
     client.toggle_pause(&admin);
 
-    assert!(client.try_set_reputation(&admin, &guardian, &100u64).is_err());
+    assert!(client
+        .try_set_reputation(&admin, &guardian, &100u64)
+        .is_err());
 }
 
 #[test]
@@ -649,12 +650,7 @@ pub struct MockDripsContract;
 
 #[contractimpl]
 impl MockDripsContract {
-    pub fn start_stream(
-        _env: Env,
-        _contributor: Address,
-        _task_id: u64,
-        _resolution_status: u32,
-    ) {}
+    pub fn start_stream(_env: Env, _contributor: Address, _task_id: u64, _resolution_status: u32) {}
 }
 
 // ─── Circuit breaker ───────────────────────────────────────────────
@@ -722,15 +718,27 @@ fn test_all_operations_return_nonzero_cost() {
     let (_env, _admin, _token, client) = setup();
 
     let ops = [
-        Operation::RegisterTask, Operation::Vote, Operation::AddGuardian,
-        Operation::SetReputation, Operation::LockTokens, Operation::UnlockTokens,
-        Operation::ResignGuardian, Operation::SetWeightThreshold, Operation::StartRewardStream,
-        Operation::TogglePause, Operation::RecordFailure, Operation::ResetCircuitBreaker,
+        Operation::RegisterTask,
+        Operation::Vote,
+        Operation::AddGuardian,
+        Operation::SetReputation,
+        Operation::LockTokens,
+        Operation::UnlockTokens,
+        Operation::ResignGuardian,
+        Operation::SetWeightThreshold,
+        Operation::StartRewardStream,
+        Operation::TogglePause,
+        Operation::RecordFailure,
+        Operation::ResetCircuitBreaker,
         Operation::UpgradeContract,
     ];
 
     for op in ops {
-        assert!(client.get_estimated_cost(&op) > 0, "{:?} returned zero cost", op);
+        assert!(
+            client.get_estimated_cost(&op) > 0,
+            "{:?} returned zero cost",
+            op
+        );
     }
 }
 
@@ -740,14 +748,25 @@ fn test_vote_is_most_expensive_write_operation() {
     let vote_cost = client.get_estimated_cost(&Operation::Vote);
 
     let ops = [
-        Operation::RegisterTask, Operation::AddGuardian, Operation::SetReputation,
-        Operation::LockTokens, Operation::UnlockTokens, Operation::ResignGuardian,
-        Operation::SetWeightThreshold, Operation::StartRewardStream, Operation::TogglePause,
-        Operation::RecordFailure, Operation::ResetCircuitBreaker,
+        Operation::RegisterTask,
+        Operation::AddGuardian,
+        Operation::SetReputation,
+        Operation::LockTokens,
+        Operation::UnlockTokens,
+        Operation::ResignGuardian,
+        Operation::SetWeightThreshold,
+        Operation::StartRewardStream,
+        Operation::TogglePause,
+        Operation::RecordFailure,
+        Operation::ResetCircuitBreaker,
     ];
 
     for op in ops {
-        assert!(vote_cost >= client.get_estimated_cost(&op), "Vote should be >= {:?}", op);
+        assert!(
+            vote_cost >= client.get_estimated_cost(&op),
+            "Vote should be >= {:?}",
+            op
+        );
     }
 }
 
@@ -757,14 +776,26 @@ fn test_upgrade_contract_is_overall_maximum() {
     let upgrade_cost = client.get_estimated_cost(&Operation::UpgradeContract);
 
     let ops = [
-        Operation::RegisterTask, Operation::Vote, Operation::AddGuardian,
-        Operation::SetReputation, Operation::LockTokens, Operation::UnlockTokens,
-        Operation::ResignGuardian, Operation::SetWeightThreshold, Operation::StartRewardStream,
-        Operation::TogglePause, Operation::RecordFailure, Operation::ResetCircuitBreaker,
+        Operation::RegisterTask,
+        Operation::Vote,
+        Operation::AddGuardian,
+        Operation::SetReputation,
+        Operation::LockTokens,
+        Operation::UnlockTokens,
+        Operation::ResignGuardian,
+        Operation::SetWeightThreshold,
+        Operation::StartRewardStream,
+        Operation::TogglePause,
+        Operation::RecordFailure,
+        Operation::ResetCircuitBreaker,
     ];
 
     for op in ops {
-        assert!(upgrade_cost >= client.get_estimated_cost(&op), "UpgradeContract should be >= {:?}", op);
+        assert!(
+            upgrade_cost >= client.get_estimated_cost(&op),
+            "UpgradeContract should be >= {:?}",
+            op
+        );
     }
 }
 
@@ -772,21 +803,48 @@ fn test_upgrade_contract_is_overall_maximum() {
 fn test_cost_spot_checks() {
     let (_env, _admin, _token, client) = setup();
 
-    assert_eq!(client.get_estimated_cost(&Operation::SetWeightThreshold), 650_000);
-    assert_eq!(client.get_estimated_cost(&Operation::SetReputation),       700_000);
-    assert_eq!(client.get_estimated_cost(&Operation::AddGuardian),         700_000);
-    assert_eq!(client.get_estimated_cost(&Operation::TogglePause),         730_000);
-    assert_eq!(client.get_estimated_cost(&Operation::ResetCircuitBreaker), 800_000);
-    assert_eq!(client.get_estimated_cost(&Operation::RecordFailure),       880_000);
-    assert_eq!(client.get_estimated_cost(&Operation::RegisterTask),      1_000_000);
+    assert_eq!(
+        client.get_estimated_cost(&Operation::SetWeightThreshold),
+        650_000
+    );
+    assert_eq!(
+        client.get_estimated_cost(&Operation::SetReputation),
+        700_000
+    );
+    assert_eq!(client.get_estimated_cost(&Operation::AddGuardian), 700_000);
+    assert_eq!(client.get_estimated_cost(&Operation::TogglePause), 730_000);
+    assert_eq!(
+        client.get_estimated_cost(&Operation::ResetCircuitBreaker),
+        800_000
+    );
+    assert_eq!(
+        client.get_estimated_cost(&Operation::RecordFailure),
+        880_000
+    );
+    assert_eq!(
+        client.get_estimated_cost(&Operation::RegisterTask),
+        1_000_000
+    );
 
-    assert_eq!(client.get_estimated_cost(&Operation::LockTokens),        1_250_000);
-    assert_eq!(client.get_estimated_cost(&Operation::StartRewardStream), 1_330_000);
-    assert_eq!(client.get_estimated_cost(&Operation::UnlockTokens),      1_300_000);
-    assert_eq!(client.get_estimated_cost(&Operation::ResignGuardian),    1_400_000);
+    assert_eq!(client.get_estimated_cost(&Operation::LockTokens), 1_250_000);
+    assert_eq!(
+        client.get_estimated_cost(&Operation::StartRewardStream),
+        1_330_000
+    );
+    assert_eq!(
+        client.get_estimated_cost(&Operation::UnlockTokens),
+        1_300_000
+    );
+    assert_eq!(
+        client.get_estimated_cost(&Operation::ResignGuardian),
+        1_400_000
+    );
 
-    assert_eq!(client.get_estimated_cost(&Operation::Vote),              1_960_000);
-    assert_eq!(client.get_estimated_cost(&Operation::UpgradeContract),   2_500_000);
+    assert_eq!(client.get_estimated_cost(&Operation::Vote), 1_960_000);
+    assert_eq!(
+        client.get_estimated_cost(&Operation::UpgradeContract),
+        2_500_000
+    );
 }
 
 #[test]
@@ -805,18 +863,29 @@ fn test_all_costs_above_base_invocation_overhead() {
     const BASE: u64 = 500_000;
 
     let ops = [
-        Operation::RegisterTask, Operation::Vote, Operation::AddGuardian,
-        Operation::SetReputation, Operation::LockTokens, Operation::UnlockTokens,
-        Operation::ResignGuardian, Operation::SetWeightThreshold, Operation::StartRewardStream,
-        Operation::TogglePause, Operation::RecordFailure, Operation::ResetCircuitBreaker,
+        Operation::RegisterTask,
+        Operation::Vote,
+        Operation::AddGuardian,
+        Operation::SetReputation,
+        Operation::LockTokens,
+        Operation::UnlockTokens,
+        Operation::ResignGuardian,
+        Operation::SetWeightThreshold,
+        Operation::StartRewardStream,
+        Operation::TogglePause,
+        Operation::RecordFailure,
+        Operation::ResetCircuitBreaker,
         Operation::UpgradeContract,
     ];
 
     for op in ops {
-        assert!(client.get_estimated_cost(&op) > BASE, "{:?} is below base overhead", op);
+        assert!(
+            client.get_estimated_cost(&op) > BASE,
+            "{:?} is below base overhead",
+            op
+        );
     }
 }
-
 
 // ─── Withdrawal timelock tests ──────────────────────────────────────
 
@@ -839,7 +908,7 @@ fn test_request_unlock_initiates_timelock() {
 
     // Request unlock should succeed
     client.request_unlock(&guardian);
-    
+
     // Timelock should be set
     let timelock = client.get_withdrawal_timelock(&guardian);
     assert!(timelock.is_some());
@@ -867,18 +936,18 @@ fn test_unlock_tokens_succeeds_after_24_hours() {
 
     // Request unlock
     client.request_unlock(&guardian);
-    
+
     // Get the timelock timestamp
     let timelock = client.get_withdrawal_timelock(&guardian).unwrap();
-    
+
     // Advance ledger by 24 hours + 1 second
     let jump = 86401u64;
     env.ledger().set_timestamp(timelock + jump);
-    
+
     // Now unlock should succeed
     let result = client.try_unlock_tokens(&guardian);
     assert!(result.is_ok());
-    
+
     // Timelock should be cleared
     let new_timelock = client.get_withdrawal_timelock(&guardian);
     assert!(new_timelock.is_none());
@@ -906,18 +975,18 @@ fn test_resign_guardian_succeeds_after_24_hours() {
 
     // Request unlock
     client.request_unlock(&guardian);
-    
+
     // Get the timelock timestamp
     let timelock = client.get_withdrawal_timelock(&guardian).unwrap();
-    
+
     // Advance ledger by 24 hours + 1 second
     let jump = 86401u64;
     env.ledger().set_timestamp(timelock + jump);
-    
+
     // Now resign should succeed
     let result = client.try_resign_guardian(&guardian);
     assert!(result.is_ok());
-    
+
     // Guardian should no longer be registered
     assert!(!client.is_guardian(&guardian));
 }

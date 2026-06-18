@@ -1,22 +1,34 @@
-use soroban_sdk::{contract, contractimpl, Address, Env};
-use crate::types::{ContractError, DataKey, RewardStream, Snapshot};
-use crate::{circuit_breaker, drips, events, guardian, reputation, storage, task};
 use crate::contracts::logic;
+use crate::types::{ContractError, DataKey, RewardStream, Snapshot};
 use crate::DEFAULT_WEIGHT_THRESHOLD;
+use crate::{circuit_breaker, drips, events, guardian, reputation, storage, task};
+use soroban_sdk::{contract, contractimpl, Address, Env};
 
 #[contract]
 pub struct VeroContract;
 
 #[contractimpl]
 impl VeroContract {
-    pub fn initialize(env: Env, admin: Address, token: Address, lock_threshold: i128) -> Result<(), ContractError> {
-        if env.storage().instance().get::<_, bool>(&DataKey::Initialized).unwrap_or(false) {
+    pub fn initialize(
+        env: Env,
+        admin: Address,
+        token: Address,
+        lock_threshold: i128,
+    ) -> Result<(), ContractError> {
+        if env
+            .storage()
+            .instance()
+            .get::<_, bool>(&DataKey::Initialized)
+            .unwrap_or(false)
+        {
             return Err(ContractError::AlreadyInitialized);
         }
         env.storage().instance().set(&DataKey::Initialized, &true);
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::TokenAddress, &token);
-        env.storage().instance().set(&DataKey::LockThreshold, &lock_threshold);
+        env.storage()
+            .instance()
+            .set(&DataKey::LockThreshold, &lock_threshold);
         env.storage().instance().set(&DataKey::Paused, &false);
         env.storage().instance().extend_ttl(100_000, 100_000);
         Ok(())
@@ -28,7 +40,11 @@ impl VeroContract {
 
     pub fn toggle_pause(env: Env, admin: Address) -> Result<(), ContractError> {
         admin.require_auth();
-        let current = env.storage().instance().get(&DataKey::Paused).unwrap_or(false);
+        let current = env
+            .storage()
+            .instance()
+            .get(&DataKey::Paused)
+            .unwrap_or(false);
         env.storage().instance().set(&DataKey::Paused, &!current);
         Ok(())
     }
@@ -46,7 +62,10 @@ impl VeroContract {
     }
 
     pub fn is_paused(env: Env) -> bool {
-        env.storage().instance().get(&DataKey::Paused).unwrap_or(false)
+        env.storage()
+            .instance()
+            .get(&DataKey::Paused)
+            .unwrap_or(false)
     }
 
     pub fn add_guardian(env: Env, admin: Address, guardian: Address) -> Result<(), ContractError> {
@@ -55,7 +74,11 @@ impl VeroContract {
         Ok(())
     }
 
-    pub fn remove_guardian(env: Env, admin: Address, guardian: Address) -> Result<(), ContractError> {
+    pub fn remove_guardian(
+        env: Env,
+        admin: Address,
+        guardian: Address,
+    ) -> Result<(), ContractError> {
         circuit_breaker::require_not_paused(&env)?;
         guardian::remove_guardian(&env, admin, guardian);
         Ok(())
@@ -100,9 +123,15 @@ impl VeroContract {
         logic::resign_guardian(&env, guardian)
     }
 
-    pub fn set_weight_threshold(env: Env, admin: Address, threshold: u64) -> Result<(), ContractError> {
+    pub fn set_weight_threshold(
+        env: Env,
+        admin: Address,
+        threshold: u64,
+    ) -> Result<(), ContractError> {
         admin.require_auth();
-        env.storage().instance().set(&DataKey::WeightThreshold, &threshold);
+        env.storage()
+            .instance()
+            .set(&DataKey::WeightThreshold, &threshold);
         Ok(())
     }
 
@@ -118,11 +147,7 @@ impl VeroContract {
         env.storage().instance().set(&DataKey::VaultAddress, &vault);
     }
 
-    pub fn register_task(
-        env: Env,
-        admin: Address,
-        task_id: u64,
-    ) -> Result<(), ContractError> {
+    pub fn register_task(env: Env, admin: Address, task_id: u64) -> Result<(), ContractError> {
         circuit_breaker::require_not_paused(&env)?;
         let stored_admin: Address = env
             .storage()
@@ -136,11 +161,7 @@ impl VeroContract {
         task::register_tasks(&env, admin, task_ids)
     }
 
-    pub fn cancel_task(
-        env: Env,
-        admin: Address,
-        task_id: u64,
-    ) -> Result<(), ContractError> {
+    pub fn cancel_task(env: Env, admin: Address, task_id: u64) -> Result<(), ContractError> {
         circuit_breaker::require_not_paused(&env)?;
         task::cancel_task(&env, admin, task_id)
     }
@@ -225,6 +246,8 @@ impl VeroContract {
     }
 
     pub fn get_withdrawal_timelock(env: Env, guardian: Address) -> Option<u64> {
-        env.storage().instance().get(&DataKey::WithdrawalTimelock(guardian))
+        env.storage()
+            .instance()
+            .get(&DataKey::WithdrawalTimelock(guardian))
     }
 }
