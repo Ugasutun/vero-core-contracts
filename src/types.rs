@@ -58,6 +58,8 @@ pub enum DataKey {
     Reputation(Address),
     WeightThreshold,
     Task(u64),
+    ActiveTask(u64),
+    ArchivedTask(u64),
     Voted(u64, Address),
     TaskVoters(u64),
     Admin,
